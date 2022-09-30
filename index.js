@@ -1,6 +1,7 @@
 var { graphqlHTTP } = require("express-graphql");
 var { buildSchema, assertInputType } = require("graphql");
 var express = require("express");
+const { argsToArgsConfig } = require("graphql/type/definition");
 
 // Construct a schema, using GraphQL schema language
 var restaurants = [
@@ -94,7 +95,7 @@ type Mutation{
 var root = {
   restaurant: (arg) =>  {
     // Your code goes here
-    return restaurants[arg.id]
+    return restaurants.find(restaurant => restaurant.id === arg.id)
   },
   restaurants: () => {
     // Your code goes here
@@ -102,24 +103,30 @@ var root = {
   },
   setrestaurant: ({ input }) => {
     // Your code goes here
-    restaurants.push({name: input.name, email:input.email, age:input.age})
+    // Find which will be the next ID to assign the new restaurant:
+    const newID = Math.max(...restaurants.map(restaurant => restaurant.id)) + 1
+    restaurants.push({name: input.name, description:input.description, id:newID})
     return input
   },
-  deleterestaurant: ({ id }) => {
+  deleterestaurant: ( arg ) => {
     // Your code goes here
-    restaurants = restaurants.filter(restaurant => restaurant.id !== id)
-    return {ok}
+    const ok = Boolean(restaurants.find(restaurant => restaurant.id === arg.id))
+    // console.log(restaurants.id)
+    restaurants = restaurants.filter(restaurant => restaurant.id !== arg.id)
+    return { ok }
   },
 
   editrestaurant: ({ id, ...restaurant }) => {
     // Your code goes here
-    if (!restaurants[id]) {
+    const idx = restaurants.findIndex( restaurant => restaurant.id === id)
+    if (idx < 0) {
       throw new Error("restaurant doesn't exist")
     }
-    restaurants[id] = {
-      ...restaurants[id], ...restaurant
-    }
-    return restaurants[id]
+    
+    restaurants.splice(idx, 1, {
+      ...restaurants[idx], ...restaurant
+    })
+    return restaurants[idx]
   },
 };
 var app = express();
